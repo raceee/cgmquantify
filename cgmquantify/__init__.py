@@ -140,34 +140,34 @@ class CGMQuantify:
 
     def TIR(self, sd=1, sr=5):
         """
-            Computes and returns the time in range
-            Args:
-                (pd.DataFrame): dataframe of data with DateTime, Time and Glucose columns
-                sd (integer): standard deviation for computing range (default=1)
-                sr (integer): sampling rate (default=5[minutes, once every 5 minutes glucose is recorded])
-            Returns:
-                TIR (float): time in range, units=minutes
-                
+        Computes and returns the time in range
+        Args:
+            sd (integer): standard deviation for computing range (default=1)
+            sr (integer): sampling rate (default=5 minutes; glucose recorded every 5 minutes)
+        Returns:
+            TIR (float): time in range, units = minutes
         """
-        up = np.mean(self.df['Glucose']) + sd*np.std(self.df['Glucose'])
-        dw = np.mean(self.df['Glucose']) - sd*np.std(self.df['Glucose'])
-        TIR = len(self.df[(self.df['Glucose']<= up) & (self.df['Glucose']>= dw)])*sr 
+        mean_glucose = self.df['Glucose'].mean()
+        std_glucose = self.df['Glucose'].std()
+        up = mean_glucose + sd * std_glucose
+        dw = mean_glucose - sd * std_glucose
+        TIR = len(self.df[(self.df['Glucose'] <= up) & (self.df['Glucose'] >= dw)]) * sr
         return TIR
 
     def TOR(self, sd=1, sr=5):
         """
-            Computes and returns the time outside range
-            Args:
-                (pd.DataFrame): dataframe of data with DateTime, Time and Glucose columns
-                sd (integer): standard deviation for computing  range (default=1)
-                sr (integer): sampling rate (default=5[minutes, once every 5 minutes glucose is recorded])
-            Returns:
-                TOR (float): time outside range, units=minutes
-                
+        Computes and returns the time outside range
+        Args:
+            sd (integer): standard deviation for computing range (default=1)
+            sr (integer): sampling rate (default=5 minutes; glucose recorded every 5 minutes)
+        Returns:
+            TOR (float): time outside range, units = minutes
         """
-        up = np.mean(self.df['Glucose']) + sd*np.std(self.df['Glucose'])
-        dw = np.mean(self.df['Glucose']) - sd*np.std(self.df['Glucose'])
-        TOR = len(self.df[(self.df['Glucose']>= up) | (self.df['Glucose']<= dw)])*sr
+        mean_glucose = self.df['Glucose'].mean()
+        std_glucose = self.df['Glucose'].std()
+        up = mean_glucose + sd * std_glucose
+        dw = mean_glucose - sd * std_glucose
+        TOR = len(self.df[(self.df['Glucose'] >= up) | (self.df['Glucose'] <= dw)]) * sr
         return TOR
 
     def POR(self, sd=1, sr=5):
@@ -214,9 +214,13 @@ class CGMQuantify:
                 MGE (float): the mean of glucose excursions (outside specified range)
                 
         """
-        up = np.mean(self.df['Glucose']) + sd*np.std(self.df['Glucose'])
-        dw = np.mean(self.df['Glucose']) - sd*np.std(self.df['Glucose'])
-        MGE = np.mean(self.df[(self.df['Glucose']>= up) | (self.df['Glucose']<= dw)])
+        mean_glucose = self.df['Glucose'].mean()
+        std_glucose = self.df['Glucose'].std()
+
+        up = mean_glucose + sd * std_glucose
+        dw = mean_glucose - sd * std_glucose
+
+        MGE = self.df['Glucose'][(self.df['Glucose'] >= up) | (self.df['Glucose'] <= dw)].mean()
         return MGE
 
     def MGN(self, sd=1):
