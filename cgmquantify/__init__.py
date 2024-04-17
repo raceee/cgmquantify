@@ -63,7 +63,7 @@ class CGMQuantify:
         return df
 
 
-    def interdaycv(self):
+    def interdaycv(self, optional_df=None):
         """
             Computes and returns the interday coefficient of variation of glucose
             Args:
@@ -72,10 +72,14 @@ class CGMQuantify:
                 cvx (float): interday coefficient of variation averaged over all days
                 
         """
-        cvx = (np.std(self.df['Glucose']) / (np.mean(self.df['Glucose'])))*100
-        return cvx
+        if optional_df is not None:
+            cvx = (np.std(optional_df['Glucose']) / (np.mean(optional_df['Glucose'])))*100
+            return cvx
+        else:
+            cvx = (np.std(self.df['Glucose']) / (np.mean(self.df['Glucose'])))*100
+            return cvx
 
-    def interdaysd(df):
+    def interdaysd(self, optional_df=None):
         """
             Computes and returns the interday standard deviation of glucose
             Args:
@@ -84,8 +88,12 @@ class CGMQuantify:
                 interdaysd (float): interday standard deviation averaged over all days
                 
         """
-        interdaysd = np.std(df['Glucose'])
-        return interdaysd
+        if optional_df is not None:
+            interdaysd = np.std(optional_df['Glucose'])
+            return interdaysd
+        else:
+            interdaysd = np.std(self.df['Glucose'])
+            return interdaysd
 
     def intradaycv(self):
         """
@@ -100,7 +108,7 @@ class CGMQuantify:
         """
         intradaycv = []
         for i in pd.unique(self.df['Day']):
-            intradaycv.append(self.interdaycv(self.df[self.df['Day']==i]))
+            intradaycv.append(self.interdaycv(optional_df=self.df[self.df['Day']==i]))
         
         intradaycv_mean = np.mean(intradaycv)
         intradaycv_median = np.median(intradaycv)
@@ -123,8 +131,8 @@ class CGMQuantify:
         intradaysd =[]
 
         for i in pd.unique(self.df['Day']):
-            intradaysd.append(np.std(self.df[self.df['Day']==i]))
-        
+            intradaysd.append(np.std(self.df[self.df['Day']==i]["Glucose"]))
+
         intradaysd_mean = np.mean(intradaysd)
         intradaysd_median = np.median(intradaysd)
         intradaysd_sd = np.std(intradaysd)
