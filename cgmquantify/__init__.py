@@ -37,12 +37,13 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
         plotglucosesd(): Plots glucose with specified standard deviation lines
         plotglucosebounds(): Plots glucose with user-defined boundaries
         plotglucosesmooth(): Plots smoothed glucose plot (with LOWESS smoothing)
-                
 """
 
 class CGMQuantify:
     def __init__(self, filename) -> None:
         self.df = self.importdexcom(filename)
+        self.TIR_ = self.TIR()
+        self.TOR_ = self.TOR()
 
     def importdexcom(self, filename):
         """
@@ -183,8 +184,8 @@ class CGMQuantify:
         """
         up = np.mean(self.df['Glucose']) + sd*np.std(self.df['Glucose'])
         dw = np.mean(self.df['Glucose']) - sd*np.std(self.df['Glucose'])
-        TOR = len(self.df[(self.df['Glucose']>= up) | (self.df['Glucose']<= dw)])*sr
-        POR = (TOR/(len(self.df)*sr))*100
+        # TOR = len(self.df[(self.df['Glucose']>= up) | (self.df['Glucose']<= dw)])*sr
+        POR = (self.TOR_/(len(self.df)*sr))*100
         return POR
 
     def PIR(self, sd=1, sr=5):
@@ -200,8 +201,8 @@ class CGMQuantify:
         """
         up = np.mean(self.df['Glucose']) + sd*np.std(self.df['Glucose'])
         dw = np.mean(self.df['Glucose']) - sd*np.std(self.df['Glucose'])
-        TIR = len(self.df[(self.df['Glucose']<= up) | (self.df['Glucose']>= dw)])*sr
-        PIR = (TIR/(len(self.df)*sr))*100
+        # TIR = len(self.df[(self.df['Glucose']<= up) | (self.df['Glucose']>= dw)])*sr
+        PIR = (self.TIR_/(len(self.df)*sr))*100
         return PIR
 
     def MGE(self, sd=1):
@@ -233,9 +234,15 @@ class CGMQuantify:
                 MGN (float): the mean of glucose excursions (inside specified range)
                 
         """
-        up = np.mean(self.df['Glucose']) + sd*np.std(self.df['Glucose'])
-        dw = np.mean(self.df['Glucose']) - sd*np.std(self.df['Glucose'])
-        MGN = np.mean(self.df[(self.df['Glucose']<= up) & (self.df['Glucose']>= dw)])
+        mean_glucose = self.df['Glucose'].mean()
+        std_glucose = self.df['Glucose'].std()
+        
+        upper_bound = mean_glucose + sd * std_glucose
+        lower_bound = mean_glucose - sd * std_glucose
+        
+        filtered_glucose = self.df[(self.df['Glucose'] <= upper_bound) & (self.df['Glucose'] >= lower_bound)]
+        
+        MGN = filtered_glucose['Glucose'].mean()
         return MGN
 
     def MAGE(self, std=1):
@@ -332,7 +339,7 @@ class CGMQuantify:
         J = 0.001*((np.mean(self.df['Glucose'])+np.std(self.df['Glucose']))**2)
         return J
 
-    def LBGI_HBGI(self):
+    def LBGI_HBGI(self,i):
         """
             Connecter function to calculate rh and rl, used for ADRR function
             Args:
@@ -344,7 +351,8 @@ class CGMQuantify:
                 rh (float): See calculation of HBGI
                 
         """
-        f = ((np.log(self.df['Glucose'])**1.084) - 5.381)
+        df_ = self.df[self.df['Day']==i]
+        f = ((np.log(df_['Glucose'])**1.084) - 5.381)
         rl = []
         for i in f: 
             if (i <= 0):
@@ -418,7 +426,8 @@ class CGMQuantify:
         """
         ADRRl = []
         for i in pd.unique(self.df['Day']):
-            LBGI, HBGI, rh, rl = LBGI_HBGI(self.df[self.df['Day']==i])
+            # LBGI, HBGI, rh, rl = self.LBGI_HBGI(self.df[self.df['Day']==i])
+            LBGI, HBGI, rh, rl = self.LBGI_HBGI(i)
             LR = np.max(rl)
             HR = np.max(rh)
             ADRRl.append(LR+HR)
@@ -465,7 +474,7 @@ class CGMQuantify:
         uniquetimes = self.df['Minfrommid'].unique()
 
         for i in uniquetimes:
-            MODD_n.append(uniquevalfilter(self.df, i))
+            MODD_n.append(self.uniquevalfilter(i))
         
         #Remove zeros from dataframe for calculation (in case there are random unique values that result in a mean of 0)
         MODD_n[MODD_n == 0] = np.nan
@@ -486,7 +495,7 @@ class CGMQuantify:
         """
         self.df['Timefrommidnight'] =  self.df['Time'].dt.time
         lists=[]
-        for i in range(0, len(df['Timefrommidnight'])):
+        for i in range(0, len(self.df['Timefrommidnight'])):
             lists.append(int(self.df['Timefrommidnight'][i].strftime('%H:%M:%S')[0:2])*60 + int(self.df['Timefrommidnight'][i].strftime('%H:%M:%S')[3:5]) + round(int(self.df['Timefrommidnight'][i].strftime('%H:%M:%S')[6:9])/60))
         self.df['Minfrommid'] = lists
         self.df = self.df.drop(columns=['Timefrommidnight'])
@@ -496,7 +505,7 @@ class CGMQuantify:
         uniquetimes = self.df['Minfrommid'].unique()
 
         for i in uniquetimes:
-            MODD_n.append(uniquevalfilter(self.df, i))
+            MODD_n.append(self.uniquevalfilter(i))
         
         #Remove zeros from dataframe for calculation (in case there are random unique values that result in a mean of 0)
         MODD_n[MODD_n == 0] = np.nan
